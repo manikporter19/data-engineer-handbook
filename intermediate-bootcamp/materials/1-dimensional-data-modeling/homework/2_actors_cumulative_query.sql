@@ -4,7 +4,7 @@
 INSERT INTO actors
 WITH last_year AS (
     SELECT * FROM actors
-    WHERE current_year = 1970  -- Replace with actual year variable
+    WHERE current_year = 1969  -- Replace with actual year variable
 ),
 this_year AS (
     SELECT 
@@ -14,7 +14,7 @@ this_year AS (
         AVG(rating) as avg_rating,
         year
     FROM actor_films
-    WHERE year = 1971  -- Replace with actual year variable
+    WHERE year = 1970  -- Replace with actual year variable
     GROUP BY actor, actorid, year
 )
 SELECT
