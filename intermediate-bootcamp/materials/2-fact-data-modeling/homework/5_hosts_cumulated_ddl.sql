@@ -2,8 +2,8 @@
 -- Tracks which dates each host is experiencing any activity
 
 CREATE TABLE hosts_cumulated (
-    host TEXT,
-    host_activity_datelist DATE[],
-    date DATE,
+    host TEXT NOT NULL,
+    host_activity_datelist DATE[] NOT NULL DEFAULT ARRAY[]::DATE[],
+    date DATE NOT NULL,
     PRIMARY KEY (host, date)
 );

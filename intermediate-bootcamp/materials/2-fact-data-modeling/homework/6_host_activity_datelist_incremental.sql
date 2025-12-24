@@ -1,11 +1,11 @@
 -- Incremental query to generate host_activity_datelist
 -- Builds up the activity list one day at a time
 
-INSERT INTO hosts_cumulated
+INSERT INTO hosts_cumulated (host, host_activity_datelist, date)
 WITH yesterday AS (
     SELECT * 
     FROM hosts_cumulated
-    WHERE date = DATE('2023-03-30')  -- Replace with actual date variable
+    WHERE date = DATE('2023-03-30')  -- Replace with actual date variable (e.g., :prev_date or {{ var('prev_date') }})
 ),
 today AS (
     SELECT 
@@ -13,7 +13,7 @@ today AS (
         DATE_TRUNC('day', event_time)::DATE as today_date,
         COUNT(1) as num_events
     FROM events
-    WHERE DATE_TRUNC('day', event_time) = DATE('2023-03-31')  -- Replace with actual date variable
+    WHERE DATE_TRUNC('day', event_time) = DATE('2023-03-31')  -- Replace with actual date variable (e.g., :this_date or {{ var('this_date') }})
         AND host IS NOT NULL
     GROUP BY host, DATE_TRUNC('day', event_time)
 )

@@ -1,7 +1,7 @@
 -- Incremental query that loads host_activity_reduced day-by-day
 -- Aggregates daily metrics into monthly arrays
 
-INSERT INTO host_activity_reduced
+INSERT INTO host_activity_reduced (month, host, hit_array, unique_visitors_array)
 WITH daily_aggregates AS (
     SELECT 
         DATE_TRUNC('month', event_time)::DATE as month,
@@ -10,14 +10,14 @@ WITH daily_aggregates AS (
         COUNT(1) as hits,
         COUNT(DISTINCT user_id) as unique_visitors
     FROM events
-    WHERE DATE_TRUNC('day', event_time) = DATE('2023-03-31')  -- Replace with actual date variable
+    WHERE DATE_TRUNC('day', event_time) = DATE('2023-03-31')  -- Replace with actual date variable (e.g., :this_date or {{ var('this_date') }})
         AND host IS NOT NULL
     GROUP BY DATE_TRUNC('month', event_time), host, DATE_TRUNC('day', event_time)
 ),
 yesterday AS (
     SELECT *
     FROM host_activity_reduced
-    WHERE month = DATE_TRUNC('month', DATE('2023-03-31'))  -- Replace with actual date variable
+    WHERE month = DATE_TRUNC('month', DATE('2023-03-31'))  -- Replace with actual date variable (e.g., :this_date or {{ var('this_date') }})
 )
 SELECT 
     COALESCE(da.month, y.month) as month,

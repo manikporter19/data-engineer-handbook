@@ -1,11 +1,11 @@
 -- Cumulative query to generate device_activity_datelist from events
 -- Builds up the activity list one day at a time using FULL OUTER JOIN
 
-INSERT INTO user_devices_cumulated
+INSERT INTO user_devices_cumulated (user_id, browser_type, device_activity_datelist, date)
 WITH yesterday AS (
     SELECT * 
     FROM user_devices_cumulated
-    WHERE date = DATE('2023-03-30')  -- Replace with actual date variable
+    WHERE date = DATE('2023-03-30')  -- Replace with actual date variable (e.g., :prev_date or {{ var('prev_date') }})
 ),
 today AS (
     SELECT 
@@ -15,7 +15,7 @@ today AS (
         COUNT(1) as num_events
     FROM events e
     JOIN devices d ON e.device_id = d.device_id
-    WHERE DATE_TRUNC('day', e.event_time) = DATE('2023-03-31')  -- Replace with actual date variable
+    WHERE DATE_TRUNC('day', e.event_time) = DATE('2023-03-31')  -- Replace with actual date variable (e.g., :this_date or {{ var('this_date') }})
         AND e.user_id IS NOT NULL
     GROUP BY e.user_id, d.browser_type, DATE_TRUNC('day', e.event_time)
 )
