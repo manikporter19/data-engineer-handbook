@@ -106,8 +106,15 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Daily active users (DAU) growth
 - Average session duration
 - Premium conversion rate (hypothesis: more engaged users convert)
-- Social sharing outside the app (viral coefficient)
-- User satisfaction (NPS score)
+- **Social sharing / viral coefficient**: 
+  - **Definition**: (# new registered users attributed to invites sent in D1-7) / (# invites sent)
+  - **Attribution window**: 7 days from invite sent to registration
+  - **Target**: ≥ 0.15 (15% conversion from invite to registration)
+- **User satisfaction**:
+  - **In-session CSAT**: 1-5 star rating after each listening party session ("How was this experience?")
+  - **Target**: ≥ 4.0 average rating
+  - **Survey timing**: Immediately after listening party ends (≤ 30 min session) or next day for longer sessions
+  - **Note**: Avoid NPS within short experiment windows; use quarterly NPS tracking separately
 
 #### Guardrail Metrics
 
@@ -134,13 +141,14 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Primary metric improves by ≥ +3% (ITT, p < 0.05)
 - No guardrail degrades by > -2%
 - Voice moderation cost per 1k sessions ≤ $5
-- User feedback NPS ≥ 7/10
+- **In-session CSAT** ≥ 4.0 (user feedback after listening party sessions)
 
 **Ship Treatment B if**:
 - Primary metric improves by ≥ +5% (ITT, p < 0.05)
 - No guardrail degrades by > -2%
 - Voice infrastructure cost per hour ≤ $0.10
 - Abuse report rate ≤ 0.001
+- **In-session CSAT** ≥ 4.0
 - Can scale to 10% of user base within budget constraints
 
 **Do not ship if**:
@@ -231,14 +239,23 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - AI DJ session starts per user
 - Average AI DJ session duration vs. regular playlist
 - Skip rate during AI DJ sessions
-- User feedback ratings after sessions
+- **User feedback (in-session CSAT)**: 1-5 star rating after AI DJ session completion
+  - **Target**: ≥ 4.2 average rating
+  - **Survey timing**: Immediately after AI DJ session ends
 - Time-to-next-song consistency
 
 **Lagging Indicators** (Days 30-90):
-- User satisfaction scores
+- **User satisfaction**:
+  - **In-session CSAT**: Track after each AI DJ session (target ≥ 4.2)
+  - **Periodic NPS**: Quarterly measurement, not within experiment window (avoid response bias)
 - Feature stickiness (return rate to AI DJ)
 - Premium retention rate
-- Listening diversity (new artists/genres explored)
+- **Listening diversity**:
+  - **Unique artists per week**: COUNT(DISTINCT artist_id) per user per week
+  - **Target**: ≥ 20% increase vs control
+  - **Alternative**: Shannon entropy of genre distribution H = -Σ(p_i * log(p_i)) where p_i is proportion of plays in genre i
+  - **Alternative**: Gini coefficient of artist plays (0=perfect equality, 1=one artist dominates)
+  - **Target**: Gini coefficient ≤ 0.70 (less concentration = more diversity)
 - User testimonials and app store ratings
 
 #### Guardrail Metrics
@@ -271,12 +288,14 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - No guardrail degrades by > -2%
 - Skip rate increase ≤ +3%
 - AI compute cost per incremental hour ≤ $0.03
+- **In-session CSAT** ≥ 4.2
 
 **Ship Treatment B if**:
 - Primary metric improves by ≥ +8% (ITT, p < 0.05)
 - No guardrail degrades by > -2%
 - TTS/LLM cost per hour ≤ $0.02
-- User satisfaction score ≥ 8/10
+- **In-session CSAT** ≥ 4.2
+- **Voice opt-out rate** ≤ 20% (user control preserved)
 - Feature can scale to 50% of user base within budget
 
 **Do not ship if**:
@@ -379,7 +398,11 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 **Lagging Indicators** (Days 30-180):
 - Family plan referral rate (new family plans created)
 - Average family plan size
-- Overall family plan satisfaction (survey)
+- **Overall family plan satisfaction**:
+  - **Quarterly family plan survey**: Sent to primary account holder
+  - **Timing**: Not within experiment window (avoid bias)
+  - **Alternative in-experiment**: Feature-specific CSAT after viewing insights
+  - **Target**: ≥ 4.0 on 1-5 scale for feature-specific satisfaction
 - Customer support tickets related to family plans
 - Lifetime value (LTV) of family plan subscribers
 
@@ -414,13 +437,15 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Email open rate ≥ 40%
 - Privacy complaints ≤ 0.01%
 - Cost per incremental retained family ≤ $10
+- **Feature CSAT** ≥ 4.0 (satisfaction with insights specifically)
 
 **Ship Treatment B if**:
 - Primary metric improves by ≥ +5% (ITT, p < 0.05)
 - No guardrail degrades by > -2%
 - Dashboard engagement ≥ 30% monthly active users
 - Analytics cost per account ≤ $0.10/month
-- Positive satisfaction score ≥ 8/10
+- **Feature CSAT** ≥ 4.0
+- Privacy opt-out rate ≤ 5%
 - Can scale to all family plans within infrastructure budget
 
 **Do not ship if**:
