@@ -404,3 +404,63 @@ The experiments follow a staged rollout approach (control + 2 treatment groups) 
 - Guardrails ensure holistic platform health
 - Cost controls prevent budget overruns
 - Treatment comparisons (A vs B) enable incremental feature investment decisions
+
+**5. Measurement Windows & ITT/TOT Analysis**:
+
+All experiments use **standardized measurement windows**:
+- **Leading indicators**: D1-14 (early signal detection)
+- **Primary metric measurement**: D1-28 (Exp 1, 2) or D1-90 (Exp 3)
+- **Lagging indicators**: D29-90 (Exp 1, 2) or D91-180 (Exp 3)
+
+**Intent-to-Treat (ITT) vs. Treatment-on-Treated (TOT)**:
+- **ITT** (primary): Includes all randomized users, regardless of exposure
+  - Used for all ship/no-ship decisions
+  - Represents real-world deployment impact
+  - Conservative estimate, accounts for non-compliance
+  
+- **TOT** (secondary): Includes only users who actually used the feature
+  - Used for mechanism insight and feature optimization
+  - Helps understand feature effectiveness among adopters
+  - NOT used for ship decisions (introduces selection bias)
+
+**Example**:
+- Exp 1: ITT = all users in treatment cell; TOT = users who created/joined ≥1 party
+- Exp 2: ITT = all users with AI DJ enabled; TOT = users who started ≥1 AI DJ session
+- Exp 3: ITT = all families assigned to treatment; TOT = families where account holder viewed insights
+
+**6. Power Analysis & Sample Sizing**:
+
+**Experiment 1 (Listening Parties)**:
+- **Baseline**: 28-day retention = 35%
+- **MDE (Minimum Detectable Effect)**: +3 percentage points (to 38%)
+- **Sample size**: ~18,000 users per treatment arm
+  - Power: 80%, alpha: 0.05
+  - Bonferroni correction for 2 treatments: alpha = 0.025 per comparison
+- **Test duration**: 4-6 weeks (28 days + 2 weeks ramp-up)
+- **Seasonality**: Avoid major holidays, control for day-of-week effects
+
+**Experiment 2 (AI DJ)**:
+- **Baseline**: Average daily listening = 60 minutes
+- **Standard deviation**: 45 minutes (typical for streaming platforms)
+- **MDE**: +5 minutes per day (+8.3%)
+- **Sample size**: ~25,000 users per treatment arm
+  - Power: 80%, alpha: 0.05
+  - Bonferroni correction for 2 treatments: alpha = 0.025
+- **Test duration**: 2-4 weeks minimum (capture weekly patterns)
+- **Seasonality**: Control for weekday vs. weekend listening patterns
+
+**Experiment 3 (Family Insights)**:
+- **Baseline**: 90-day family retention = 82%
+- **MDE**: +2.5 percentage points (to 84.5%)
+- **Sample size**: ~12,000 family accounts per treatment arm
+  - Power: 80%, alpha: 0.05
+  - Bonferroni correction for 2 treatments: alpha = 0.025
+- **Test duration**: 12-16 weeks (90 days + ramp-up)
+- **Long-term holdout**: Consider 5% permanent holdout for long-term validation
+- **Sequential testing**: Use group sequential methods with O'Brien-Fleming boundaries to enable early stopping for futility or overwhelming success
+
+**Statistical Considerations**:
+- **Multiple comparisons**: Holm-Bonferroni method for family-wise error rate control
+- **Peeking protection**: Pre-registered analysis plan, limited interim looks
+- **Variance reduction**: CUPED (Controlled-experiment Using Pre-Experiment Data) to reduce variance using pre-period metrics
+- **Heterogeneous effects**: Pre-specified subgroup analysis (e.g., by platform, user tenure, baseline engagement)
