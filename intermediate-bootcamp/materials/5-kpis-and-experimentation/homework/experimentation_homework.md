@@ -790,6 +790,291 @@ Each experiment has **2 treatments + 1 control**, requiring corrections for:
 
 ---
 
+## Instrumentation & Technical Implementation
+
+### Experiment 1: Listening Parties - Event Tracking
+
+**Core Events**:
+- `party_create` (user_id, party_id, timestamp, party_type, privacy_setting)
+- `party_join` (user_id, party_id, timestamp, join_source)
+- `party_leave` (user_id, party_id, timestamp, duration_seconds, exit_reason)
+- `invite_send` (sender_id, recipient_id, party_id, timestamp, channel)
+- `invite_accept` (user_id, party_id, timestamp, time_to_accept_seconds)
+- `chat_msg` (user_id, party_id, timestamp, msg_length, has_emoji)
+- `reaction_add` (user_id, party_id, track_id, timestamp, reaction_type)
+- `queue_add` (user_id, party_id, track_id, timestamp, add_position)
+- `queue_vote` (user_id, party_id, track_id, timestamp, vote_direction)
+- `abuse_report` (reporter_id, reported_user_id, party_id, timestamp, report_reason)
+- `concurrent_users` (party_id, timestamp, user_count) - logged every 30s
+
+**Context Logging**:
+- Device type (iOS/Android/Desktop/Web)
+- Platform version (app version, OS version)
+- Network quality (wifi/cellular/bandwidth_mbps)
+- Locale/language
+- Geographic region (country, city)
+
+**Feature Flags**:
+- `listening_parties_enabled` (boolean, user_id, cluster_id)
+- `listening_parties_variant` (enum: control|basic|full, user_id)
+- `voice_chat_enabled` (boolean, user_id) - separate toggle within treatment B
+
+### Experiment 2: AI DJ - Event Tracking
+
+**Core Events**:
+- `dj_start` (user_id, session_id, timestamp, entry_point, mood_selected)
+- `dj_stop` (user_id, session_id, timestamp, duration_seconds, exit_reason, tracks_played)
+- `mood_select` (user_id, session_id, timestamp, mood_tag, is_auto_detected)
+- `commentary_toggle` (user_id, session_id, timestamp, enabled_state)
+- `commentary_play` (user_id, session_id, timestamp, commentary_type, duration_ms)
+- `track_transition` (user_id, session_id, timestamp, transition_type, from_track_id, to_track_id)
+  - `transition_type`: "dj_intro" | "mood_transition" | "normal" | "user_skip"
+- `skip` (user_id, session_id, track_id, timestamp, time_in_track_seconds, skip_reason)
+  - `skip_reason`: "after_commentary" | "track_dislike" | "other"
+- `dwell_time` (user_id, session_id, track_id, timestamp, listen_duration_seconds)
+- `battery_usage` (user_id, session_id, timestamp, battery_drain_percent) - logged on session end
+- `latency` (user_id, session_id, timestamp, commentary_load_ms, track_load_ms)
+
+**Context Logging**:
+- Device type, platform version, network quality, locale
+- Battery level at session start
+- Audio quality setting (low/medium/high/extreme)
+- Accessibility settings enabled (screen reader, reduced motion)
+- Time of day (morning/afternoon/evening/night)
+
+**Feature Flags**:
+- `ai_dj_enhanced_enabled` (boolean, user_id)
+- `ai_dj_variant` (enum: control|enhanced, user_id)
+- `dj_commentary_default` (boolean, user_id) - default on/off state
+
+### Experiment 3: Family Insights - Event Tracking
+
+**Core Events**:
+- `report_email_sent` (family_id, timestamp, member_count, report_type)
+- `report_email_open` (family_id, user_id, timestamp, device_type)
+- `dashboard_open` (family_id, user_id, timestamp, entry_point)
+- `dashboard_view_section` (family_id, user_id, timestamp, section_name, dwell_seconds)
+- `challenge_view` (family_id, user_id, timestamp, challenge_id)
+- `challenge_join` (family_id, user_id, timestamp, challenge_id)
+- `challenge_complete` (family_id, user_id, timestamp, challenge_id, completion_time_days)
+- `family_playlist_create` (family_id, creator_id, timestamp, playlist_id)
+- `family_playlist_add` (family_id, user_id, timestamp, playlist_id, track_id)
+- `share_event` (family_id, sender_id, recipient_ids, timestamp, content_type)
+- `privacy_opt_out` (family_id, user_id, timestamp, opt_out_reason)
+- `data_deletion_request` (family_id, user_id, timestamp)
+- `visibility_config_change` (family_id, user_id, timestamp, new_visibility_level)
+
+**Context Logging**:
+- Device type, platform version, network quality, locale
+- Family account tenure (days since creation)
+- Number of active family members
+- Plan type (family plan tier)
+- Member ages (bucketed: <13, 13-17, 18-24, 25-34, 35+)
+
+**Feature Flags**:
+- `family_insights_enabled` (boolean, family_id)
+- `family_insights_variant` (enum: control|treatment, family_id)
+- `privacy_tier` (enum: minimal|standard|detailed, family_id) - user configurable
+
+---
+
+## Migration, Rollback & Feature Flagging
+
+### Feature Flag Infrastructure
+
+**Configuration Service**:
+- LaunchDarkly / Optimizely / Internal feature flag service
+- Real-time flag evaluation (sub-100ms latency)
+- Gradual rollout controls (% traffic allocation)
+- Emergency killswitch accessible via API and UI
+
+**Flag Evaluation**:
+- **Client-side**: Flags evaluated on app/web load with local caching
+- **Server-side**: Flags evaluated on API requests for backend-controlled features
+- **Fallback**: Safe defaults if flag service unreachable (graceful degradation)
+
+**Targeting Rules**:
+- By user_id (individual overrides for testing)
+- By cluster_id (Exp 1 social graph clusters)
+- By family_id (Exp 3 household-level)
+- By geography (country/region rollout)
+- By platform (iOS/Android/Desktop/Web)
+- By user segment (tenure, engagement level, plan type)
+
+### Migration Strategy
+
+**Pre-Launch (Week -2 to -1)**:
+1. **Code Deploy**: Feature code deployed to 100% of infrastructure, gated by flags
+2. **Synthetic Testing**: Automated tests verify all treatment variants
+3. **Internal Dogfooding**: 1% internal employee testing (week -1)
+   - Verify instrumentation, catch critical bugs, validate UX
+4. **Database Migrations**: Schema changes for new event tables, indexes created
+5. **Monitoring Setup**: Dashboards, alerts, anomaly detection configured
+
+**Rollout Phases**:
+- Each phase includes progressive flag % increases
+- Automated monitoring checks guardrails before advancing
+- Manual approval gate between major phases (5%→25%, 25%→50%)
+
+**Progressive Delivery**:
+- **Canary deployment**: Backend services rolled out to 10% of fleet first
+- **Blue-green deployment**: New frontend versions deployed alongside old
+- **Shadow mode**: Exp 3 logs privacy-sensitive events without showing UI (validation phase)
+
+### Rollback Procedures
+
+**Automated Rollback Triggers**:
+- **Critical Guardrails**: Immediate automatic rollback if:
+  - Crash rate >2% (5-minute rolling window)
+  - API error rate >5% (1-minute rolling window)
+  - P99 latency >3s (5-minute rolling window)
+- **Actions**:
+  - Feature flag set to 0% traffic automatically
+  - Incident alert sent to on-call engineer
+  - Post-mortem required before re-enabling
+
+**Manual Rollback**:
+- **Partial rollback**: Reduce traffic % (e.g., 50%→25%→10%) if minor issues detected
+- **Full rollback**: Set flag to 0%, revert to control for all users
+- **Geographic rollback**: Disable for specific countries if region-specific issues
+- **Platform rollback**: Disable for specific platforms (e.g., Android only) if bugs isolated
+
+**Rollback Execution Time**:
+- **Flag change**: <5 minutes to propagate to all clients
+- **Database rollback**: Automated scripts to revert schema changes (~15 minutes)
+- **Full code rollback**: Blue-green switch (~10 minutes) or gradual traffic shift (~30 minutes)
+
+**Data Consistency**:
+- **Event logging**: Continues during rollback to capture user experience
+- **In-flight sessions**: Users mid-session gracefully transitioned back to control
+- **Experiment assignment**: Users locked to assignment (no re-randomization on rollback)
+
+---
+
+## Experiment-Specific Refinements
+
+### Experiment 1: Listening Parties
+
+**Refined Design**:
+- **Invitation Gating**: Only treatment users can create and send party invites
+  - Prevents cross-contamination between control and treatment
+  - Control users never see invites, ensuring clean comparison
+- **Cluster Randomization**: Use social graph communities detected by Louvain algorithm
+  - Assigns entire friend groups to same treatment to minimize spillover
+  - Analysis accounts for cluster-level correlation (use clustered standard errors)
+
+**Enhanced Guardrails**:
+- **Abuse report rate**: ≤0.001 (1 per 1,000 party sessions)
+  - Real-time moderation queue for flagged content
+  - Automated toxicity detection (Perspective API or equivalent)
+  - Temporary party suspension for users with multiple reports
+- **Session latency**: P95 ≤500ms for real-time sync
+  - Audio playback must stay synchronized within 500ms across all participants
+  - Rollback if network quality degrades experience
+- **Moderation cost**: ≤$0.02 per party session
+  - Automated moderation reduces need for human review
+  - Scale human moderation team based on abuse rate trends
+
+**Metric Clarifications**:
+- **"Repeat party" adoption**: Users who create or join ≥2 parties within D14
+  - Indicates habit formation beyond trial
+  - Target: ≥15% of exposed users become repeat party-goers
+- **Primary Metric (28D retention)**: Measured via ITT
+  - All users assigned to treatment counted, regardless of party participation
+  - Conservative estimate of real-world impact post-launch
+
+**Positioning Note**:
+- Frame as "Group Listening Sessions" for brand consistency
+- Differentiate from "Blend" (personalized merged playlists) and collaborative playlists
+- Focus on synchronous, real-time social experience
+
+### Experiment 2: AI DJ
+
+**Refined Design**:
+- **Baseline AI DJ Enhancement**: Frame experiment as "baseline AI DJ vs enhanced mood/time-of-day + commentary"
+  - Spotify already has AI DJ feature (launched 2023)
+  - Treatment adds: (1) mood-based transitions, (2) time-of-day awareness, (3) optional voice commentary
+  - Ensures novelty and feasibility given existing infrastructure
+
+**Enhanced Guardrails**:
+- **Commentary opt-out rate**: ≤20% of users within D14
+  - High opt-out signals commentary quality issues or annoyance
+  - Track "skip after commentary" as leading indicator (target <15%)
+- **Battery usage**: ≤10% additional drain vs baseline DJ
+  - Voice synthesis and AI processing can increase battery consumption
+  - Monitor on mobile devices especially
+- **Network quality**: Graceful degradation on poor connections
+  - Fallback to text-based transitions if voice download stalls
+  - Pre-cache commentary for offline mode
+
+**Metric Clarifications**:
+- **Listening diversity**: 
+  - **Primary**: Unique artists per week (COUNT DISTINCT artist_id per user per week)
+  - **Target**: ≥20% increase (e.g., baseline 50 artists → treatment 60 artists)
+  - Validates hypothesis that mood-based transitions broaden discovery
+- **"Stickiness"**: % of users who return to AI DJ within 7 days of first session
+  - Target: ≥40% (indicates feature value beyond novelty)
+- **Skip rate**: Track overall skip rate AND "skip after commentary" specifically
+  - If "skip after commentary" >15%, commentary quality needs improvement
+
+**User Control**:
+- **Commentary toggle**: Separate from transitions
+  - Users can enjoy mood-based transitions without voice commentary
+  - Default: commentary ON for treatment, but easily toggled off
+  - Preference persists across sessions
+
+### Experiment 3: Family Insights
+
+**Refined Design**:
+- **Randomization**: Family account level (not individual users)
+  - Prevents spillover within household
+  - All family members see same treatment variant
+- **Lightweight In-App Card vs Full Dashboard**: Consider A/B testing delivery mechanism
+  - **Treatment A**: Email + lightweight in-app notification card
+    - Decouples email deliverability from feature value
+    - Faster load time, lower friction
+  - **Treatment B**: Email + full dedicated dashboard
+    - Richer experience, more engagement opportunities
+    - Higher instrumentation complexity
+- **Opt-In Model**: Feature not enabled by default
+  - Primary account holder receives email explaining feature
+  - Must affirmatively click "Enable Family Insights" button
+  - Other family members notified and can opt out individually
+
+**Enhanced Guardrails**:
+- **Support tickets**: ≤0.1% of exposed families submit privacy-related support tickets
+  - Track ticket categories: "privacy concern", "data accuracy", "opt-out help"
+  - Immediate escalation to privacy team if spike detected
+- **Privacy complaints**: ≤0.01% (≤1 per 10,000 families)
+  - More severe than support tickets (indicates trust breach)
+  - Immediate killswitch review if threshold exceeded
+- **Social media sentiment**: Monitor Twitter/Reddit for privacy discussions
+  - Negative sentiment score >10% triggers stakeholder review
+
+**Metric Clarifications**:
+- **90D family plan retention**: Primary metric (ITT analysis)
+  - Measured as: % of families still subscribed at D90
+  - Baseline: 82% → Target: 84.5% (+2.5pp)
+- **Family playlist creation**: % of families who create ≥1 collaborative playlist within D60
+  - Indicates feature drives collaborative behaviors beyond passive consumption
+  - Target: ≥25% of exposed families
+- **Dashboard engagement**: % of families with ≥2 dashboard visits within D30
+  - Repeated visits suggest ongoing value, not just novelty
+  - Target: ≥30% of families who opened dashboard once
+
+**Privacy Engineering**:
+- **K-anonymity**: Aggregate data only shown if ≥3 active family members
+  - If 2-member family, show "Not enough data for insights" message
+  - Prevents one member inferring other's exact behavior
+- **Differential privacy noise**: ±5% random noise added to all metrics
+  - Example: 100 hours listened → reported as 95-105 hours
+  - Prevents reverse-engineering individual listening from aggregates
+- **Sensitive content exclusion**: Podcasts, explicit tracks, private sessions excluded
+  - Reduces embarrassment risk and privacy concerns
+  - Users can opt-in to include podcasts if desired
+
+---
+
 ## Final Implementation Summary
 
 These three experiments demonstrate comprehensive A/B testing design including:
@@ -801,5 +1086,9 @@ These three experiments demonstrate comprehensive A/B testing design including:
 ✅ **Operational Readiness**: Phased rollout, rollback triggers, guardrails, cost controls
 ✅ **User Control**: Opt-in/opt-out mechanisms, configurable visibility, accessibility considerations
 ✅ **Compliance**: GDPR, CCPA, COPPA, terms of service, privacy policy updates
+✅ **Instrumentation**: Comprehensive event tracking with device/platform context for heterogeneity analysis
+✅ **Feature Flags**: Real-time flag evaluation, gradual rollout controls, emergency killswitch
+✅ **Migration & Rollback**: Automated and manual procedures, blue-green deployment, shadow mode validation
+✅ **Experiment Refinements**: Invitation gating, cluster randomization, enhanced guardrails, metric clarifications
 
-Each experiment is production-ready with clear success criteria, comprehensive risk mitigation, and ethical design principles.
+Each experiment is production-ready with clear success criteria, comprehensive risk mitigation, ethical design principles, and complete technical implementation specifications.
