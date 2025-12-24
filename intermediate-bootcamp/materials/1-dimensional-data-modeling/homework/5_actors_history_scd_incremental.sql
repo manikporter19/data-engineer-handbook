@@ -1,92 +1,57 @@
 -- Incremental query for actors_history_scd
 -- Combines previous year's SCD data with new incoming data from actors table
+-- This implements a non-snapshot SCD: extends unchanged records, closes and creates new records for changes
 
-CREATE TYPE scd_type AS (
-    quality_class quality_class,
-    is_active BOOLEAN,
-    start_date INTEGER,
-    end_date INTEGER
-);
+-- Note: Create this type once in a separate DDL script, or use CREATE TYPE IF NOT EXISTS
+-- CREATE TYPE IF NOT EXISTS scd_type AS (
+--     quality_class quality_class,
+--     is_active BOOLEAN,
+--     start_date INTEGER,
+--     end_date INTEGER
+-- );
 
-INSERT INTO actors_history_scd
+-- Update existing unchanged records by extending their end_date
+UPDATE actors_history_scd scd
+SET end_date = 1971  -- Replace with actual year variable (e.g., :this_year)
+FROM actors this_year
+WHERE scd.actorid = this_year.actorid
+  AND scd.end_date = 1970  -- Replace with actual year variable (e.g., :prev_year)
+  AND scd.quality_class = this_year.quality_class
+  AND scd.is_active = this_year.is_active
+  AND this_year.current_year = 1971;  -- Replace with actual year variable
+
+-- Insert new records for changed attributes (close old record, insert new)
+INSERT INTO actors_history_scd (actor, actorid, quality_class, is_active, start_date, end_date)
 WITH last_year_scd AS (
     SELECT * FROM actors_history_scd
-    WHERE current_year = 1970  -- Replace with actual year variable
-    AND end_date = 1970
-),
-historical_scd AS (
-    SELECT 
-        actor,
-        actorid,
-        quality_class,
-        is_active,
-        start_date,
-        end_date
-    FROM actors_history_scd
-    WHERE current_year = 1970  -- Replace with actual year variable
-    AND end_date < 1970
+    WHERE end_date = 1970  -- Replace with actual year variable (e.g., :prev_year)
 ),
 this_year_data AS (
     SELECT * FROM actors
-    WHERE current_year = 1971  -- Replace with actual year variable
+    WHERE current_year = 1971  -- Replace with actual year variable (e.g., :this_year)
 ),
-unchanged_records AS (
+changed_actors AS (
+    -- Only actors who existed last year AND have changed attributes
     SELECT 
         ty.actor,
         ty.actorid,
         ty.quality_class,
         ty.is_active,
-        ly.start_date,
-        ty.current_year as end_date
+        ty.current_year
     FROM this_year_data ty
     JOIN last_year_scd ly
         ON ty.actorid = ly.actorid
-    WHERE ty.quality_class = ly.quality_class
-        AND ty.is_active = ly.is_active
+    WHERE ty.quality_class <> ly.quality_class
+        OR ty.is_active <> ly.is_active
 ),
-changed_records AS (
-    SELECT 
-        ty.actor,
-        ty.actorid,
-        UNNEST(ARRAY[
-            ROW(
-                ly.quality_class,
-                ly.is_active,
-                ly.start_date,
-                ly.end_date
-            )::scd_type,
-            ROW(
-                ty.quality_class,
-                ty.is_active,
-                ty.current_year,
-                ty.current_year
-            )::scd_type
-        ]) as records
-    FROM this_year_data ty
-    LEFT JOIN last_year_scd ly
-        ON ty.actorid = ly.actorid
-    WHERE (ty.quality_class <> ly.quality_class
-        OR ty.is_active <> ly.is_active)
-        OR ly.actorid IS NULL
-),
-unnested_changed_records AS (
-    SELECT 
-        actor,
-        actorid,
-        (records::scd_type).quality_class,
-        (records::scd_type).is_active,
-        (records::scd_type).start_date,
-        (records::scd_type).end_date
-    FROM changed_records
-),
-new_records AS (
+new_actors AS (
+    -- Brand new actors who did not exist last year
     SELECT 
         ty.actor,
         ty.actorid,
         ty.quality_class,
         ty.is_active,
-        ty.current_year as start_date,
-        ty.current_year as end_date
+        ty.current_year
     FROM this_year_data ty
     LEFT JOIN last_year_scd ly
         ON ty.actorid = ly.actorid
@@ -97,15 +62,17 @@ SELECT
     actorid,
     quality_class,
     is_active,
-    start_date,
-    end_date,
-    1971 as current_year  -- Replace with actual year variable
-FROM (
-    SELECT * FROM historical_scd
-    UNION ALL
-    SELECT * FROM unchanged_records
-    UNION ALL
-    SELECT * FROM unnested_changed_records
-    UNION ALL
-    SELECT * FROM new_records
-) a;
+    current_year as start_date,
+    current_year as end_date
+FROM changed_actors
+
+UNION ALL
+
+SELECT 
+    actor,
+    actorid,
+    quality_class,
+    is_active,
+    current_year as start_date,
+    current_year as end_date
+FROM new_actors;

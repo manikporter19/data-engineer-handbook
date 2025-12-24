@@ -1,7 +1,7 @@
 -- Backfill query for actors_history_scd
 -- Populates the entire SCD table in a single query using window functions
 
-INSERT INTO actors_history_scd
+INSERT INTO actors_history_scd (actor, actorid, quality_class, is_active, start_date, end_date)
 WITH with_previous AS (
     SELECT 
         actor,
@@ -33,12 +33,11 @@ with_streaks AS (
     FROM with_previous
 )
 SELECT 
-    actor,
+    MAX(actor) as actor,  -- Use MAX to pick a representative actor name per streak
     actorid,
     quality_class,
     is_active,
     MIN(current_year) as start_date,
-    MAX(current_year) as end_date,
-    MAX(current_year) as current_year
+    MAX(current_year) as end_date
 FROM with_streaks
-GROUP BY actor, actorid, streak_identifier, quality_class, is_active;
+GROUP BY actorid, streak_identifier, quality_class, is_active;

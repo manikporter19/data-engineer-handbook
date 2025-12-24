@@ -1,20 +1,20 @@
 -- Cumulative table generation query for actors table
 -- Populates the actors table one year at a time using FULL OUTER JOIN pattern
 
-INSERT INTO actors
+INSERT INTO actors (actor, actorid, films, quality_class, is_active, current_year)
 WITH last_year AS (
     SELECT * FROM actors
-    WHERE current_year = 1969  -- Replace with actual year variable
+    WHERE current_year = 1969  -- Replace with actual year variable (e.g., :prev_year or {{ var('prev_year') }})
 ),
 this_year AS (
     SELECT 
         actor,
         actorid,
-        ARRAY_AGG(ROW(film, votes, rating, filmid)::films) as films,
+        ARRAY_AGG(ROW(film, votes, rating, filmid)::films ORDER BY votes DESC, filmid) as films,
         AVG(rating) as avg_rating,
         year
     FROM actor_films
-    WHERE year = 1970  -- Replace with actual year variable
+    WHERE year = 1970  -- Replace with actual year variable (e.g., :this_year or {{ var('this_year') }})
     GROUP BY actor, actorid, year
 )
 SELECT
