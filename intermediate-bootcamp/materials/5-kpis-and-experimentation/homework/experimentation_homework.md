@@ -68,6 +68,9 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 
 #### Metrics
 
+**Primary Metric** (user-level):
+- **28-day retention rate**: % of users who return to Spotify at least once in the 28 days following experiment enrollment
+
 **Leading Indicators** (Days 1-14):
 - Feature adoption rate (% of users who create/join a listening party)
 - Average listening party duration
@@ -76,16 +79,51 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Friend-to-friend engagement rate
 
 **Lagging Indicators** (Days 14-90):
-- 28-day retention rate (primary metric)
 - Daily active users (DAU) growth
 - Average session duration
 - Premium conversion rate (hypothesis: more engaged users convert)
 - Social sharing outside the app (viral coefficient)
 - User satisfaction (NPS score)
 
-#### Expected Impact
-- Treatment A: +5-8% increase in retention, moderate engagement
-- Treatment B: +10-15% increase in retention, high engagement but potential technical challenges
+#### Guardrail Metrics
+
+**Reliability & Performance**:
+- Crash rate: ≤ 0.5% (protect from voice/chat feature instability)
+- Playback start latency: ≤ 2 seconds (ensure synchronized playback doesn't degrade UX)
+- Audio sync lag between users: ≤ 500ms
+
+**Content Safety & Moderation**:
+- Abuse reports per DAU: ≤ 0.001 (monitor voice chat for harassment)
+- Moderation cost per 1,000 sessions: ≤ $5 (voice transcription and flagging)
+
+**Monetization Protection**:
+- Ad impressions per free-tier session: ≥ baseline (ensure social features don't reduce ad exposure)
+- Premium conversion rate: ≥ baseline (confirm social features don't cannibalize paid conversion)
+
+**Cost Controls**:
+- Voice infrastructure cost per listening party hour: ≤ $0.10
+- Overall platform cost increase: ≤ 3%
+
+#### Success Criteria & Decision Rules
+
+**Ship Treatment A if**:
+- Primary metric improves by ≥ +3% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- Voice moderation cost per 1k sessions ≤ $5
+- User feedback NPS ≥ 7/10
+
+**Ship Treatment B if**:
+- Primary metric improves by ≥ +5% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- Voice infrastructure cost per hour ≤ $0.10
+- Abuse report rate ≤ 0.001
+- Can scale to 10% of user base within budget constraints
+
+**Do not ship if**:
+- Primary metric neutral or negative
+- Any guardrail degrades > -5%
+- Cost per incremental retained user > $2
+- Content moderation requirements exceed operational capacity
 
 ---
 
@@ -107,6 +145,9 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 
 #### Metrics
 
+**Primary Metric** (user-level):
+- **Average daily listening minutes per user**: Total minutes listened per day divided by active users
+
 **Leading Indicators** (Days 1-30):
 - AI DJ session starts per user
 - Average AI DJ session duration vs. regular playlist
@@ -115,16 +156,56 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Time-to-next-song consistency
 
 **Lagging Indicators** (Days 30-90):
-- Total listening hours per user
 - User satisfaction scores
 - Feature stickiness (return rate to AI DJ)
 - Premium retention rate
 - Listening diversity (new artists/genres explored)
 - User testimonials and app store ratings
 
-#### Expected Impact
-- Treatment A: +8-12% increase in listening time
-- Treatment B: +15-20% increase in listening time, potential for viral marketing ("Spotify's AI DJ is amazing")
+#### Guardrail Metrics
+
+**Reliability & Performance**:
+- Crash rate: ≤ 0.5%
+- Playback start latency: ≤ 1.5 seconds
+- Rebuffer rate: ≤ 0.3% of playback time
+- Track transition smoothness: ≥ 95% successful crossfades
+
+**Content Quality**:
+- Skip rate: ≤ baseline + 5% (ensure AI recommendations aren't worse than manual)
+- Negative feedback rate: ≤ 2% of sessions
+- Artist/genre diversity maintained: ≥ baseline
+
+**Monetization Protection**:
+- Ad impressions per free-tier session: ≥ baseline
+- Ad revenue per free user: ≥ baseline (ensure AI DJ doesn't reduce ad exposure)
+- Premium conversion rate: ≥ baseline
+
+**Cost Controls**:
+- TTS/LLM inference cost per listening hour: ≤ $0.02 (Treatment B voice prompts)
+- AI recommendation compute cost per user per month: ≤ $0.05
+- Overall infrastructure cost increase: ≤ 5%
+
+#### Success Criteria & Decision Rules
+
+**Ship Treatment A if**:
+- Primary metric improves by ≥ +5% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- Skip rate increase ≤ +3%
+- AI compute cost per incremental hour ≤ $0.03
+
+**Ship Treatment B if**:
+- Primary metric improves by ≥ +8% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- TTS/LLM cost per hour ≤ $0.02
+- User satisfaction score ≥ 8/10
+- Feature can scale to 50% of user base within budget
+
+**Do not ship if**:
+- Primary metric neutral or negative
+- Skip rate increases > +5%
+- Any guardrail degrades > -5%
+- Cost per incremental listening hour > $0.05
+- Negative user feedback > 5%
 
 ---
 
@@ -148,6 +229,9 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 
 #### Metrics
 
+**Primary Metric** (account-level):
+- **90-day family plan retention rate**: % of family plan accounts that remain subscribed 90 days after experiment enrollment
+
 **Leading Indicators** (Days 1-30):
 - Report open rate (email)
 - Dashboard visit rate (in-app)
@@ -156,16 +240,59 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Social sharing of family insights
 
 **Lagging Indicators** (Days 30-180):
-- Family plan retention rate (primary metric)
 - Family plan referral rate (new family plans created)
 - Average family plan size
 - Overall family plan satisfaction (survey)
 - Customer support tickets related to family plans
 - Lifetime value (LTV) of family plan subscribers
 
-#### Expected Impact
-- Treatment A: +3-5% increase in family plan retention
-- Treatment B: +7-10% increase in family plan retention, potential for upsells
+#### Guardrail Metrics
+
+**Privacy & Trust**:
+- Privacy complaint rate: ≤ 0.01% of family accounts
+- Opt-out rate from insights: ≤ 5%
+- Family member removal rate: ≤ baseline (ensure insights don't cause friction)
+
+**Reliability & Performance**:
+- Dashboard load time: ≤ 2 seconds
+- Email delivery success rate: ≥ 98%
+- Data accuracy: ≥ 99.5% (ensure insights are trustworthy)
+
+**Monetization Protection**:
+- Average revenue per family account: ≥ baseline
+- Family plan downgrades to individual: ≤ baseline + 1%
+- Churn within 30 days of insights: ≤ baseline
+
+**Cost Controls**:
+- Analytics computation cost per family account per month: ≤ $0.10
+- Email delivery cost per report: ≤ $0.01
+- Storage cost per family account: ≤ $0.05/month
+- Overall feature cost per retained family: ≤ $2/year
+
+#### Success Criteria & Decision Rules
+
+**Ship Treatment A if**:
+- Primary metric improves by ≥ +3% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- Email open rate ≥ 40%
+- Privacy complaints ≤ 0.01%
+- Cost per incremental retained family ≤ $10
+
+**Ship Treatment B if**:
+- Primary metric improves by ≥ +5% (ITT, p < 0.05)
+- No guardrail degrades by > -2%
+- Dashboard engagement ≥ 30% monthly active users
+- Analytics cost per account ≤ $0.10/month
+- Positive satisfaction score ≥ 8/10
+- Can scale to all family plans within infrastructure budget
+
+**Do not ship if**:
+- Primary metric neutral or negative
+- Privacy complaint rate > 0.05%
+- Any guardrail degrades > -5%
+- Cost per incremental retained family > $15
+- Opt-out rate > 10%
+- Feature causes increase in family plan downgrades
 
 ---
 
@@ -178,3 +305,31 @@ All three experiments are designed to:
 4. **Enhance Satisfaction**: Better user experience leads to positive word-of-mouth
 
 The experiments follow a staged rollout approach (control + 2 treatment groups) to understand which feature implementations provide the best return on investment while minimizing risk.
+
+### Key Experiment Design Principles Applied
+
+**1. Clear Primary Metrics**:
+- Experiment 1: 28-day retention rate (user-level)
+- Experiment 2: Average daily listening minutes per user
+- Experiment 3: 90-day family plan retention rate (account-level)
+
+**2. Comprehensive Guardrail Metrics**:
+- **Reliability**: Crash rates, latency, rebuffer rates to protect user experience
+- **Content Safety**: Abuse reports and moderation costs for social/voice features
+- **Monetization**: Ad impressions and revenue protection for free tier
+- **Cost Controls**: Infrastructure and operational cost thresholds per experiment
+- **Privacy & Trust**: Privacy complaints and opt-out rates (Experiment 3)
+
+**3. Explicit Decision Rules**:
+- Each treatment has clear success criteria with statistical significance thresholds (p < 0.05)
+- Minimum improvement thresholds prevent shipping marginal wins
+- Guardrail bounds prevent shipping features that harm other aspects of the platform
+- Cost-per-outcome thresholds ensure economic viability
+- "Do not ship" criteria protect against launching harmful features
+
+**4. Avoiding Common Pitfalls**:
+- Single primary metric per experiment prevents p-hacking
+- Leading/lagging indicator separation enables early signal detection
+- Guardrails ensure holistic platform health
+- Cost controls prevent budget overruns
+- Treatment comparisons (A vs B) enable incremental feature investment decisions
