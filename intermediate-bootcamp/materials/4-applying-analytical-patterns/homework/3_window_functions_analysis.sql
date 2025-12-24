@@ -70,101 +70,42 @@ LIMIT 20;
 
 
 -- Question 2: Longest streak of LeBron James scoring over 10 points
-WITH lebron_games AS (
+-- Uses deterministic ordering (game_date, game_id) and defensive COUNT DISTINCT
+WITH lebron AS (
     SELECT 
         gd.game_id,
         g.game_date,
-        gd.player_name,
-        gd.pts,
-        CASE WHEN gd.pts > 10 THEN 1 ELSE 0 END as scored_over_10,
-        ROW_NUMBER() OVER (ORDER BY g.game_date) as game_number
+        CASE WHEN gd.pts > 10 THEN 1 ELSE 0 END as gt10,
+        gd.pts
     FROM game_details gd
-    JOIN games g ON gd.game_id = g.game_id
+    JOIN games g ON g.game_id = gd.game_id
     WHERE gd.player_name = 'LeBron James'
-    ORDER BY g.game_date
 ),
-streak_identified AS (
-    SELECT 
-        game_id,
-        game_date,
-        player_name,
-        pts,
-        scored_over_10,
-        game_number,
-        -- Create a group identifier for consecutive games scoring > 10
-        -- When scored_over_10 changes from 1 to 0 or 0 to 1, increment group
-        SUM(CASE 
-            WHEN scored_over_10 = 1 
-                AND LAG(scored_over_10, 1, 0) OVER (ORDER BY game_number) = 0 
-            THEN 1 
-            ELSE 0 
-        END) OVER (ORDER BY game_number) as streak_group
-    FROM lebron_games
-),
-streak_lengths AS (
-    SELECT 
-        streak_group,
-        MIN(game_date) as streak_start_date,
-        MAX(game_date) as streak_end_date,
-        COUNT(*) as games_in_streak,
-        AVG(pts) as avg_points_in_streak
-    FROM streak_identified
-    WHERE scored_over_10 = 1
-    GROUP BY streak_group
-)
-SELECT 
-    streak_group,
-    streak_start_date,
-    streak_end_date,
-    games_in_streak,
-    ROUND(avg_points_in_streak, 2) as avg_points_in_streak
-FROM streak_lengths
-ORDER BY games_in_streak DESC
-LIMIT 10;
-
-
--- Alternative approach for Question 2: Using LAG to detect streak breaks
-WITH lebron_games AS (
-    SELECT 
-        gd.game_id,
-        g.game_date,
-        gd.player_name,
-        gd.pts,
-        CASE WHEN gd.pts > 10 THEN 1 ELSE 0 END as scored_over_10
-    FROM game_details gd
-    JOIN games g ON gd.game_id = g.game_id
-    WHERE gd.player_name = 'LeBron James'
-    ORDER BY g.game_date
-),
-with_streak_breaks AS (
+with_starts AS (
     SELECT 
         *,
-        -- Detect when a streak starts (previous game didn't score > 10, this game does)
         CASE 
-            WHEN scored_over_10 = 1 
-                AND (LAG(scored_over_10) OVER (ORDER BY game_date) = 0 
-                     OR LAG(scored_over_10) OVER (ORDER BY game_date) IS NULL)
+            WHEN gt10 = 1 
+                AND COALESCE(LAG(gt10) OVER (ORDER BY game_date, game_id), 0) = 0 
             THEN 1 
             ELSE 0 
-        END as is_streak_start
-    FROM lebron_games
+        END as is_start
+    FROM lebron
 ),
-with_streak_ids AS (
+with_groups AS (
     SELECT 
         *,
-        SUM(is_streak_start) OVER (ORDER BY game_date) as streak_id
-    FROM with_streak_breaks
+        SUM(is_start) OVER (ORDER BY game_date, game_id) as grp
+    FROM with_starts
 )
 SELECT 
-    streak_id,
+    grp,
     MIN(game_date) as streak_start,
     MAX(game_date) as streak_end,
-    COUNT(*) as consecutive_games_over_10_pts,
-    AVG(pts) as avg_points,
-    MIN(pts) as min_points,
-    MAX(pts) as max_points
-FROM with_streak_ids
-WHERE scored_over_10 = 1
-GROUP BY streak_id
+    COUNT(DISTINCT game_id) as consecutive_games_over_10_pts,
+    AVG(pts) as avg_points
+FROM with_groups
+WHERE gt10 = 1
+GROUP BY grp
 ORDER BY consecutive_games_over_10_pts DESC
-LIMIT 10;
+LIMIT 1;
