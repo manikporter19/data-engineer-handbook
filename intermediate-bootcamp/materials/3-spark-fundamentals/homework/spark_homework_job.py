@@ -9,14 +9,15 @@ Build a Spark job that:
 """
 
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, avg, count, sum as spark_sum, desc
+from pyspark.sql.functions import col, avg, count, sum as spark_sum, desc, broadcast
 
 
 def main():
-    # Initialize Spark session
+    # Initialize Spark session with Hive support (required for bucketing)
     spark = SparkSession.builder \
         .master("local") \
         .appName("spark_fundamentals_homework") \
+        .enableHiveSupport() \
         .getOrCreate()
     
     # Disable automatic broadcast join
@@ -52,35 +53,33 @@ def main():
     matches_bucketed = spark.table("matches_bucketed")
     medals_matches_players_bucketed = spark.table("medals_matches_players_bucketed")
     
-    # Explicitly broadcast small tables (medals and maps)
-    medals_broadcast = spark.broadcast(medals)
-    maps_broadcast = spark.broadcast(maps)
-    
-    # Perform bucket joins
-    # Join match_details with matches on match_id
+    # Perform bucket joins on match_id (all tables bucketed on this column)
+    # Join match_details with matches on match_id (bucket join)
     joined_df = match_details_bucketed.join(
         matches_bucketed,
         on="match_id",
         how="inner"
     )
     
-    # Join with medals_matches_players on match_id
+    # Join with medals_matches_players on match_id only (to leverage bucket join)
+    # Note: We align to the bucketed column for optimal performance
     joined_df = joined_df.join(
         medals_matches_players_bucketed,
-        on=["match_id", "player_id"],  # Assuming player_id exists in both
+        on="match_id",
         how="left"
     )
     
+    # Explicitly broadcast small tables (medals and maps) using broadcast() function
     # Broadcast join with medals
     joined_df = joined_df.join(
-        medals_broadcast,
+        broadcast(medals),
         on="medal_id",  # Assuming medal_id is the join key
         how="left"
     )
     
     # Broadcast join with maps
     joined_df = joined_df.join(
-        maps_broadcast,
+        broadcast(maps),
         on="map_id",  # Assuming map_id is the join key
         how="inner"
     )
