@@ -93,25 +93,25 @@ ORDER BY
 -- Specific queries to answer each question:
 
 -- Question 1: Who scored the most points playing for one team?
-WITH base AS (
-    SELECT 
-        gd.player_name,
-        gd.team_abbreviation,
-        gd.game_id,
-        gd.pts
-    FROM game_details gd
-    JOIN games g ON gd.game_id = g.game_id
-)
 SELECT 
     player_name,
     team_abbreviation,
     SUM(pts) as total_points,
     COUNT(DISTINCT game_id) as games_played,
     AVG(pts) as avg_points_per_game
-FROM base
+FROM (
+    SELECT 
+        gd.player_name,
+        gd.team_abbreviation,
+        gd.game_id,
+        gd.pts,
+        g.season
+    FROM game_details gd
+    JOIN games g ON gd.game_id = g.game_id
+) x
 GROUP BY player_name, team_abbreviation
 ORDER BY total_points DESC
-LIMIT 20;
+LIMIT 1;
 
 
 -- Question 2: Who scored the most points in one season?
