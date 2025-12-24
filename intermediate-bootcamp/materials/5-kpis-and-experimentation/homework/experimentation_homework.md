@@ -149,6 +149,38 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Cost per incremental retained user > $2
 - Content moderation requirements exceed operational capacity
 
+#### Runtime Plan & Ramp Strategy
+
+**Phase 1 - Internal Testing (Week 1)**:
+- **Traffic**: 1% internal employees and beta testers (~2,000 users)
+- **Goal**: Validate feature functionality, identify critical bugs
+- **Guardrails**: All technical metrics monitored every 6 hours
+- **Decision**: Proceed to Phase 2 if crash rate < 1% and no P0 bugs
+
+**Phase 2 - Initial External Rollout (Week 2)**:
+- **Traffic**: 5% of eligible users (~50,000 users)
+- **Goal**: Validate guardrails hold at scale, early signal on engagement
+- **Guardrails**: All metrics monitored daily
+- **Decision**: Proceed to Phase 3 if all guardrails green, no P1 bugs, initial engagement > 10%
+
+**Phase 3 - Expanded Rollout (Weeks 3-4)**:
+- **Traffic**: 25% of eligible users (~250,000 users)
+- **Goal**: Build statistical power, validate cost model at scale
+- **Guardrails**: All metrics monitored daily with alerts
+- **Decision**: Proceed to Phase 4 if leading indicators positive, cost model validated
+
+**Phase 4 - Full Rollout (Weeks 5-6)**:
+- **Traffic**: 50% of eligible users (full experimental power)
+- **Goal**: Reach statistical significance on primary metric
+- **Duration**: Maintain until 28-day retention data available for all users
+- **Decision**: Ship to 100% if success criteria met, rollback if primary metric negative
+
+**Rollback Triggers**:
+- Crash rate > 2% for 24 hours
+- Any guardrail degrades > -5%
+- Abuse reports spike > 3x baseline
+- Infrastructure costs exceed budget by > 20%
+
 ---
 
 ### Experiment 2: AI-Powered Mood-Based Music Generation
@@ -253,6 +285,40 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Any guardrail degrades > -5%
 - Cost per incremental listening hour > $0.05
 - Negative user feedback > 5%
+
+#### Runtime Plan & Ramp Strategy
+
+**Phase 1 - Internal Testing (Week 1)**:
+- **Traffic**: 1% internal employees (~5,000 users)
+- **Goal**: Validate AI model quality, test voice prompt accuracy
+- **Guardrails**: Skip rate, playback latency, TTS quality monitored continuously
+- **Decision**: Proceed if skip rate within +2% of baseline, no critical AI failures
+
+**Phase 2 - Limited External Rollout (Week 2)**:
+- **Traffic**: 5% of eligible users (~125,000 users)
+- **Goal**: Validate AI recommendations at scale, test load balancing
+- **Guardrails**: All technical and cost metrics monitored hourly
+- **Decision**: Proceed if TTS cost < $0.03/hour, latency < 2s, skip rate acceptable
+
+**Phase 3 - Measured Expansion (Weeks 3-4)**:
+- **Traffic**: Gradual increase to 50% (full experimental cohort)
+  - Week 3: 25%
+  - Week 4: 50%
+- **Goal**: Build statistical power, monitor weekly listening patterns
+- **Guardrails**: Daily monitoring with automated alerts
+- **Decision**: Maintain through full measurement window (28 days from first user)
+
+**Phase 4 - Analysis & Decision (Week 5-6)**:
+- **Traffic**: Hold at 50% while collecting full 28-day data
+- **Goal**: Reach statistical significance on average daily minutes
+- **Decision**: Ship to 100% if success criteria met, ramp down if neutral/negative
+
+**Rollback Triggers**:
+- Skip rate increases > +7% sustained for 48 hours
+- TTS/LLM costs exceed $0.05/hour
+- Crash rate > 1.5%
+- Playback failures > 2x baseline
+- Negative feedback rate > 10%
 
 ---
 
@@ -364,6 +430,55 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 - Cost per incremental retained family > $15
 - Opt-out rate > 10%
 - Feature causes increase in family plan downgrades
+
+#### Runtime Plan & Ramp Strategy
+
+**Phase 1 - Internal Testing (Weeks 1-2)**:
+- **Traffic**: 1% internal employee family accounts (~500 families)
+- **Goal**: Validate privacy controls, data accuracy, email/dashboard functionality
+- **Guardrails**: Privacy compliance, data accuracy, email delivery monitored continuously
+- **Decision**: Proceed if privacy controls working, no data accuracy issues
+
+**Phase 2 - Careful External Introduction (Weeks 3-6)**:
+- **Traffic**: 5% of eligible family accounts (~2,500 families)
+- **Goal**: Monitor privacy concerns, opt-out rates, early engagement signals
+- **Guardrails**: Privacy complaints and opt-outs monitored daily with immediate escalation
+- **Duration**: Extended 4-week period due to sensitivity of family data
+- **Decision**: Proceed if privacy complaints < 0.02%, opt-out < 5%, email open rate > 30%
+
+**Phase 3 - Gradual Scale-Up (Weeks 7-12)**:
+- **Traffic**: Progressive increase to reach full sample
+  - Week 7-8: 10% (~5,000 families)
+  - Week 9-10: 25% (~12,500 families)  
+  - Week 11-12: Full randomization (60% control, 40% treatment split)
+- **Goal**: Build statistical power while maintaining trust
+- **Guardrails**: Weekly privacy audits, continuous monitoring of all metrics
+
+**Phase 4 - Long-Term Measurement (Weeks 13-18)**:
+- **Traffic**: Maintain full experimental cohort
+- **Goal**: Capture 90-day retention data for all families
+- **Special consideration**: 5% permanent holdout for long-term effect validation
+- **Sequential testing**: Interim analysis at Week 10 and Week 14 using O'Brien-Fleming boundaries
+- **Decision**: Can stop early for futility or overwhelming success
+
+**Phase 5 - Decision & Launch (Week 19-20)**:
+- **Analysis**: Complete ITT analysis with full 90-day data
+- **Decision**: Ship to 100% if success criteria met, gradual ramp to 100% over 4 weeks
+- **Post-launch**: Maintain 5% holdout for ongoing validation
+
+**Rollback Triggers**:
+- Privacy complaint rate > 0.1% at any phase
+- Opt-out rate > 15%
+- Data accuracy issues discovered
+- Email delivery failure rate > 5%
+- Family plan downgrades increase > +10%
+- Any indication of trust erosion (negative press, support ticket surge)
+
+**Special Privacy Safeguards**:
+- Dedicated privacy review before each phase increase
+- Real-time monitoring of privacy-related support tickets
+- Immediate killswitch capability if privacy breach suspected
+- Weekly stakeholder briefing on trust metrics
 
 ---
 
