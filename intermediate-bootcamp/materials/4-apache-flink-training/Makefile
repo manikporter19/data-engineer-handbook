@@ -48,6 +48,10 @@ down:
 job:
 	docker compose exec jobmanager ./bin/flink run -py /opt/src/job/start_job.py --pyFiles /opt/src -d
 
+## Submit the sessionization homework job
+sessionization_job:
+	docker compose exec jobmanager flink run -py /opt/flink/usrlib/homework/sessionization_job.py
+
 aggregation_job:
 	docker compose exec jobmanager ./bin/flink run -py /opt/src/job/aggregation_job.py --pyFiles /opt/src -d
 
