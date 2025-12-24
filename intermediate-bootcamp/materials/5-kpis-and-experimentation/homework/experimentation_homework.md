@@ -54,6 +54,30 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 
 **Hypothesis**: Adding real-time collaborative listening sessions will increase user engagement and retention among friend groups.
 
+#### Randomization & Eligibility
+
+**Unit of Randomization**:
+- **Social graph cluster** (to handle network effects and prevent SUTVA violations)
+- Users within the same social community are assigned to the same treatment cell
+- Only treatment users can create listening parties (prevents cross-contamination)
+- Analysis unit: Inviter/creator level (users who initiate parties)
+
+**Eligibility Criteria**:
+- Users with ≥ 3 friends on Spotify (have social graph connections)
+- OR users who have used sharing features in past 90 days
+- Active Spotify users with ≥ 1 session in past 14 days
+- Excludes users under 13 years old (content moderation complexity)
+
+**Exposure Definition**:
+- User has feature flag enabled AND appears in an eligible session
+- For Treatment A: Exposed when user creates or joins ≥ 1 listening party
+- For Treatment B: Exposed when user creates or joins ≥ 1 listening party with voice/reactions
+
+**Adoption Metric**:
+- **Creator adoption**: % of users who create ≥ 1 listening party within D14
+- **Participant adoption**: % of users who join ≥ 1 listening party within D14
+- **Repeat adoption**: % of users with ≥ 3 listening party sessions within D30
+
 #### Test Cells
 - **Control Group (40%)**: Current Spotify experience, no changes
 - **Treatment A (30%)**: "Listening Party" feature with basic chat
@@ -130,6 +154,29 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 ### Experiment 2: AI-Powered Mood-Based Music Generation
 
 **Hypothesis**: An AI DJ that automatically creates transitions between songs based on user mood and time of day will increase listening time and user satisfaction.
+
+#### Randomization & Eligibility
+
+**Unit of Randomization**:
+- **User level** (independent experiences, low interference risk)
+- Device consistency: User assigned to same treatment across all devices
+- Platform-aware: Treatment experience adapts to mobile vs desktop
+
+**Eligibility Criteria**:
+- Users with ≥ 30 minutes per day baseline listening (past 30 days)
+- Active Premium or Free tier users
+- Excludes users with accessibility settings that conflict with voice prompts unless explicitly opted in
+- Excludes accounts flagged for streaming fraud/abuse
+
+**Exposure Definition**:
+- User has feature flag enabled AND initiates ≥ 1 AI DJ session
+- Treatment A: User clicks "Start AI DJ" button
+- Treatment B: User clicks "Start AI DJ" and interacts with mood selector
+
+**Adoption Metric**:
+- **Trial adoption**: % of users who start ≥ 1 AI DJ session within D14
+- **Regular adoption**: % of users who use AI DJ ≥ 3 times within D30
+- **Habitual adoption**: % of users who use AI DJ ≥ 50% of listening sessions in D30
 
 #### Test Cells
 - **Control Group (50%)**: Standard playlist experience
@@ -212,6 +259,30 @@ Spotify is a music streaming platform that I use daily. Below is my analysis of 
 ### Experiment 3: "Family Listening Insights" for Family Plan Users
 
 **Hypothesis**: Providing aggregated, privacy-respecting insights about family listening habits will increase family plan retention and satisfaction.
+
+#### Randomization & Eligibility
+
+**Unit of Randomization**:
+- **Family account/household level** (prevents spillover within families)
+- All members of the family account are assigned to the same treatment
+- Analysis unit: Family account (not individual users to avoid double-counting)
+
+**Eligibility Criteria**:
+- Active family plans with ≥ 2 active members (≥ 1 session in past 30 days)
+- Family plans active for ≥ 60 days (exclude new signups still in trial phase)
+- Excludes accounts with minors unless parental controls and consent are incorporated
+- Account in good standing (no payment issues or policy violations)
+
+**Exposure Definition**:
+- Family account has feature flag enabled AND primary account holder views insights
+- Treatment A: Email report is opened or dashboard link is clicked
+- Treatment B: In-app dashboard is visited ≥ 1 time
+
+**Adoption Metric**:
+- **Email engagement**: % of families who open ≥ 1 monthly report within D30
+- **Dashboard adoption**: % of families who visit dashboard ≥ 1 time within D30
+- **Active adoption**: % of families where ≥ 2 members view insights within D60
+- **Feature retention**: % of families that engage with insights monthly over D90
 
 #### Test Cells
 - **Control Group (60%)**: Current family plan experience
