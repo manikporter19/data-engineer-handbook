@@ -145,7 +145,7 @@ def sessionize_web_events():
                 col("w").end.alias("session_end"),
                 col("ip"),
                 col("host"),
-                col("*").count.alias("event_count")
+                lit(1).count.alias("event_count")
             )
         )
         
@@ -156,7 +156,7 @@ def sessionize_web_events():
             .select(
                 col("host"),
                 col("event_count").cast(DataTypes.DOUBLE()).avg.alias("avg_events_per_session"),
-                col("*").count.alias("total_sessions")
+                lit(1).count.alias("total_sessions")
             )
         )
         
