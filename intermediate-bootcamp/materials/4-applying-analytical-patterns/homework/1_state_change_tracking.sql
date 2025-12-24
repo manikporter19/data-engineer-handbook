@@ -1,88 +1,105 @@
 -- State Change Tracking for Players
--- Tracks player status changes: New, Retired, Continued Playing, Returned from Retirement, Stayed Retired
+-- Tracks player status changes across all seasons: New, Retired, Continued Playing, Returned from Retirement, Stayed Retired
+-- This query builds per-player, per-season activity from actual game data rather than relying on a players table
 
-WITH last_season AS (
-    SELECT 
-        player_name,
-        current_season,
-        is_active
-    FROM players
-    WHERE current_season = 2020  -- Replace with year - 1
+WITH seasons AS (
+    -- Extract all distinct seasons from the games table
+    SELECT DISTINCT season 
+    FROM games
+    ORDER BY season
 ),
-this_season AS (
+roster AS (
+    -- Build a complete roster of all players across all seasons with activity flag
+    -- A player is "active" in a season if they played in any game that season
     SELECT 
-        player_name,
-        current_season,
-        is_active
-    FROM players
-    WHERE current_season = 2021  -- Replace with current year
+        p.player_id,
+        p.player_name,
+        s.season,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 
+                FROM game_details gd
+                JOIN games g ON g.game_id = gd.game_id
+                WHERE gd.player_id = p.player_id 
+                AND g.season = s.season
+            ) THEN 1 
+            ELSE 0 
+        END as active
+    FROM players p
+    CROSS JOIN seasons s
 ),
-combined AS (
+with_lags AS (
+    -- Use window functions to compare current season with previous season and all prior seasons
     SELECT 
-        COALESCE(ts.player_name, ls.player_name) as player_name,
-        COALESCE(ts.current_season, ls.current_season + 1) as current_season,
-        ls.is_active as was_active_last_season,
-        ts.is_active as is_active_this_season
-    FROM last_season ls
-    FULL OUTER JOIN this_season ts
-        ON ls.player_name = ts.player_name
+        player_id,
+        player_name,
+        season,
+        active,
+        -- Previous season's activity status
+        LAG(active) OVER (PARTITION BY player_id ORDER BY season) as prev_active,
+        -- Whether player was ever active in any season BEFORE the current one
+        -- This helps distinguish "New" (first-ever activation) from "Returned from Retirement"
+        MAX(active) OVER (
+            PARTITION BY player_id 
+            ORDER BY season 
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ) as any_prior_active
+    FROM roster
 )
 SELECT 
+    player_id,
     player_name,
-    current_season,
+    season,
+    active as is_active_this_season,
+    prev_active as was_active_last_season,
     CASE 
-        -- New: player was not in league last season but is active this season
-        WHEN was_active_last_season IS NULL AND is_active_this_season = TRUE 
-            THEN 'New'
+        -- New: First time ever active (no prior activity, no previous season, currently active)
+        WHEN prev_active IS NULL AND active = 1 THEN 'New'
         
-        -- Retired: player was active last season but not active this season
-        WHEN was_active_last_season = TRUE AND is_active_this_season = FALSE 
-            THEN 'Retired'
+        -- Retired: Was active last season, not active this season
+        WHEN prev_active = 1 AND active = 0 THEN 'Retired'
         
-        -- Continued Playing: player was active last season and is still active this season
-        WHEN was_active_last_season = TRUE AND is_active_this_season = TRUE 
-            THEN 'Continued Playing'
+        -- Continued Playing: Was active last season, still active this season
+        WHEN prev_active = 1 AND active = 1 THEN 'Continued Playing'
         
-        -- Returned from Retirement: player was not active last season but is active this season
-        WHEN was_active_last_season = FALSE AND is_active_this_season = TRUE 
-            THEN 'Returned from Retirement'
+        -- Returned from Retirement: Was active in some prior season, not active last season, active this season
+        WHEN prev_active = 0 AND active = 1 AND any_prior_active = 1 THEN 'Returned from Retirement'
         
-        -- Stayed Retired: player was not active last season and still not active this season
-        WHEN was_active_last_season = FALSE AND is_active_this_season = FALSE 
-            THEN 'Stayed Retired'
+        -- Stayed Retired: Not active last season, not active this season, but was active in some prior season
+        WHEN prev_active = 0 AND active = 0 AND any_prior_active = 1 THEN 'Stayed Retired'
         
-        -- No longer tracked: player was in league last season but no record this season
-        WHEN was_active_last_season IS NOT NULL AND is_active_this_season IS NULL 
-            THEN 'No Longer Tracked'
+        -- Players with no activity yet (season before their debut) - filter these out or handle as needed
+        WHEN prev_active IS NULL AND active = 0 THEN NULL
         
-        ELSE 'Unknown'
-    END as player_status,
-    was_active_last_season,
-    is_active_this_season
-FROM combined
-ORDER BY player_name;
+        ELSE NULL
+    END as player_status
+FROM with_lags
+WHERE 
+    -- Filter out seasons before player's first appearance where they have no status
+    (prev_active IS NOT NULL OR active = 1)
+ORDER BY player_name, season;
 
--- Summary statistics of state changes
+-- Summary statistics of state changes by season
 SELECT 
+    season,
     CASE 
-        WHEN was_active_last_season IS NULL AND is_active_this_season = TRUE THEN 'New'
-        WHEN was_active_last_season = TRUE AND is_active_this_season = FALSE THEN 'Retired'
-        WHEN was_active_last_season = TRUE AND is_active_this_season = TRUE THEN 'Continued Playing'
-        WHEN was_active_last_season = FALSE AND is_active_this_season = TRUE THEN 'Returned from Retirement'
-        WHEN was_active_last_season = FALSE AND is_active_this_season = FALSE THEN 'Stayed Retired'
-        WHEN was_active_last_season IS NOT NULL AND is_active_this_season IS NULL THEN 'No Longer Tracked'
-        ELSE 'Unknown'
+        WHEN prev_active IS NULL AND active = 1 THEN 'New'
+        WHEN prev_active = 1 AND active = 0 THEN 'Retired'
+        WHEN prev_active = 1 AND active = 1 THEN 'Continued Playing'
+        WHEN prev_active = 0 AND active = 1 AND any_prior_active = 1 THEN 'Returned from Retirement'
+        WHEN prev_active = 0 AND active = 0 AND any_prior_active = 1 THEN 'Stayed Retired'
     END as player_status,
     COUNT(*) as player_count
-FROM combined
-GROUP BY 
-    CASE 
-        WHEN was_active_last_season IS NULL AND is_active_this_season = TRUE THEN 'New'
-        WHEN was_active_last_season = TRUE AND is_active_this_season = FALSE THEN 'Retired'
-        WHEN was_active_last_season = TRUE AND is_active_this_season = TRUE THEN 'Continued Playing'
-        WHEN was_active_last_season = FALSE AND is_active_this_season = TRUE THEN 'Returned from Retirement'
-        WHEN was_active_last_season = FALSE AND is_active_this_season = FALSE THEN 'Stayed Retired'
-        WHEN was_active_last_season IS NOT NULL AND is_active_this_season IS NULL THEN 'No Longer Tracked'
-        ELSE 'Unknown'
-    END
-ORDER BY player_count DESC;
+FROM with_lags
+WHERE 
+    -- Only count valid status transitions
+    (prev_active IS NOT NULL OR active = 1)
+    AND CASE 
+        WHEN prev_active IS NULL AND active = 1 THEN 'New'
+        WHEN prev_active = 1 AND active = 0 THEN 'Retired'
+        WHEN prev_active = 1 AND active = 1 THEN 'Continued Playing'
+        WHEN prev_active = 0 AND active = 1 AND any_prior_active = 1 THEN 'Returned from Retirement'
+        WHEN prev_active = 0 AND active = 0 AND any_prior_active = 1 THEN 'Stayed Retired'
+    END IS NOT NULL
+GROUP BY season, player_status
+ORDER BY season, player_count DESC;
