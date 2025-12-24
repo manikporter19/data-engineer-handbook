@@ -1,11 +1,16 @@
--- Backfill query for actors_history_scd
--- Populates the entire SCD table in a single query using window functions
+-- dbt model: actors_history_scd backfill
+-- File: models/actors_history_scd_backfill.sql
 --
--- Key improvements:
--- 1. Null-safe change detection using IS DISTINCT FROM
--- 2. Deterministic actor name selection using FIRST_VALUE (or MAX as fallback)
+-- This populates the SCD table in one shot from the actors table
+-- Run once to backfill historical data
 
-INSERT INTO actors_history_scd (actor, actorid, quality_class, is_active, start_date, end_date)
+{{ config(
+    materialized='table',
+    schema='analytics',
+    alias='actors_history_scd',
+    full_refresh=true
+) }}
+
 WITH with_previous AS (
     SELECT 
         actor,
@@ -13,13 +18,11 @@ WITH with_previous AS (
         current_year,
         quality_class,
         is_active,
-        -- Null-safe change detection using IS DISTINCT FROM
-        -- This correctly handles NULL values (if they ever occur despite NOT NULL constraints)
         (ROW_NUMBER() OVER (PARTITION BY actorid ORDER BY current_year) = 1)
         OR (LAG(quality_class) OVER (PARTITION BY actorid ORDER BY current_year) IS DISTINCT FROM quality_class)
         OR (LAG(is_active) OVER (PARTITION BY actorid ORDER BY current_year) IS DISTINCT FROM is_active)
         AS did_change
-    FROM actors
+    FROM {{ ref('actors_cumulative') }}
 ),
 with_streaks AS (
     SELECT 
@@ -33,8 +36,6 @@ with_streaks AS (
     FROM with_previous
 )
 SELECT 
-    -- Actor name: Use MAX as simple aggregation (or FIRST_VALUE for deterministic choice)
-    -- Since actor is not tracked in SCD, this picks a representative name per streak
     MAX(actor) as actor,
     actorid,
     quality_class,
@@ -42,4 +43,7 @@ SELECT
     MIN(current_year) as start_date,
     MAX(current_year) as end_date
 FROM with_streaks
-GROUP BY actorid, streak_identifier, quality_class, is_active;
+GROUP BY actorid, streak_identifier, quality_class, is_active
+
+-- Usage:
+-- dbt run --models actors_history_scd_backfill --full-refresh
