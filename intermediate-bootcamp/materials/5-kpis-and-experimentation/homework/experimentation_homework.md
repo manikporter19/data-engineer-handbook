@@ -579,3 +579,202 @@ All experiments use **standardized measurement windows**:
 - **Peeking protection**: Pre-registered analysis plan, limited interim looks
 - **Variance reduction**: CUPED (Controlled-experiment Using Pre-Experiment Data) to reduce variance using pre-period metrics
 - **Heterogeneous effects**: Pre-specified subgroup analysis (e.g., by platform, user tenure, baseline engagement)
+
+**7. Multiple Comparisons Correction Strategy**:
+
+Each experiment has **2 treatments + 1 control**, requiring corrections for:
+1. **Treatment A vs. Control**
+2. **Treatment B vs. Control**  
+3. **Treatment A vs. Treatment B** (optional, for incremental investment decisions)
+
+**Primary Analysis** (A vs Control, B vs Control):
+- **Holm-Bonferroni procedure** for family-wise error rate (FWER) control:
+  1. Rank p-values from smallest to largest: p₁ ≤ p₂
+  2. Compare p₁ to α/(number of tests) = 0.05/2 = 0.025
+  3. If p₁ < 0.025, reject H₀ for first test; compare p₂ to 0.05/(2-1) = 0.05
+  4. If p₁ ≥ 0.025, stop testing (accept all null hypotheses)
+- This is more powerful than simple Bonferroni while controlling FWER at 0.05
+
+**Secondary Analysis** (A vs B):
+- Only performed if both A and B show significant improvement over Control
+- Used to determine incremental value of Treatment B features
+- Uses nominal alpha = 0.05 (exploratory, informs investment decision)
+- Example: If Treatment B adds voice features, does it justify additional infrastructure cost?
+
+**Example Application** (Experiment 1):
+- Test Treatment A (basic chat) vs Control: p = 0.018
+- Test Treatment B (voice + chat) vs Control: p = 0.032
+- Holm procedure:
+  - p₁ = 0.018 < 0.025 ✓ → Reject H₀, Treatment A significantly better than Control
+  - p₂ = 0.032 < 0.05 ✓ → Reject H₀, Treatment B significantly better than Control
+- Secondary: Test B vs A to see if voice features justify additional cost
+- Decision: Ship Treatment A immediately, evaluate B's incremental value
+
+**8. Avoiding Repeated Peeking (Sequential Testing)**:
+
+**Problem**: Repeated interim analyses inflate Type I error rate (false positives)
+
+**Solution**: Pre-defined checkpoints with adjusted significance levels
+
+**Experiment 1 & 2 (Short duration, 2-4 weeks)**:
+- **Pre-registered analysis plan**: Single final analysis at study end
+- **No peeking**: Interim metrics reviewed for guardrails only, NOT primary metric
+- **Emergency stopping**: Only if guardrails violated (safety/cost), not for positive effects
+- **Rationale**: Short duration makes sequential testing unnecessary, simplifies analysis
+
+**Experiment 3 (Long duration, 12-18 weeks)**:
+- **Group sequential design** with O'Brien-Fleming boundaries
+- **Interim looks**: Week 10, Week 14, Final (Week 16-18)
+- **Adjusted alpha levels**:
+  - Interim 1 (Week 10): alpha = 0.0001 (very conservative, early stopping rare)
+  - Interim 2 (Week 14): alpha = 0.015
+  - Final analysis: alpha = 0.045
+- **Overall alpha**: Maintains 0.05 across all looks
+- **Benefits**: 
+  - Can stop early for overwhelming success (saves time/cost)
+  - Can stop for futility (reallocate resources)
+  - Protects against prolonged exposure to inferior treatment
+
+**Interim Analysis Guidelines**:
+- Conducted by independent statistician (not experiment owner)
+- Results not shared with team until final analysis or early stopping triggered
+- Only three outcomes: "Continue as planned", "Stop for success", "Stop for futility"
+- Primary metric analysis only (guardrails monitored continuously)
+
+**9. Privacy, Safety, and Policy Considerations**:
+
+**Experiment 1 (Listening Parties with Voice Chat)**:
+
+**Privacy & Safety Requirements**:
+- **Age restriction**: Users must be ≥13 years old (COPPA compliance)
+- **Parental consent**: Required for users aged 13-17 (opt-in by account holder)
+- **Recording consent**: Explicit opt-in for voice recording with clear disclosure
+  - "Your voice may be recorded for safety and quality purposes"
+  - User can disable recording (disables voice chat feature)
+- **Content moderation**: 
+  - Real-time profanity filtering and automatic flagging
+  - Post-hoc review of flagged sessions (sample 10% of all sessions)
+  - Community reporting system ("Report inappropriate behavior" button)
+  
+**Guardrails**:
+- **Abuse report rate per DAU**: ≤ 0.001 (baseline: ~0.0003 for text chat)
+- **Moderation cost per 1,000 sessions**: ≤ $5 (includes AI flagging + human review)
+- **Voice chat opt-out rate**: Track as leading indicator (target: ≤15% of voice chat users)
+  - High opt-out signals safety concerns or poor feature value
+
+**Safety Infrastructure**:
+- Automated voice transcription for flagged sessions
+- ML-based toxicity detection (scores conversations for harassment risk)
+- 24/7 moderation queue for escalated reports
+- Ban system: Temporary (1 day, 7 days) and permanent bans for repeat offenders
+- Appeal process for false positives
+
+**Policy Compliance**:
+- Terms of Service update required (voice recording disclosure)
+- Privacy Policy update (data retention: 30 days for non-flagged, 1 year for flagged)
+- Legal review in all operating jurisdictions before launch
+- GDPR compliance: Right to deletion, right to access voice data
+
+**Experiment 2 (AI DJ with Voice Prompts)**:
+
+**User Control & Accessibility**:
+- **Voice commentary toggle**: User can disable voice prompts in settings
+  - Default: Enabled (opt-out model to maximize exposure)
+  - Accessible via "AI DJ Settings" in app
+  - Persists across devices and sessions
+  
+**Guardrails**:
+- **Voice opt-out rate**: ≤20% within first 7 days (leading indicator)
+  - High opt-out suggests voice prompts are annoying or low-quality
+  - Segmented analysis: By language, platform (mobile vs desktop), time of day
+- **Negative feedback rate**: ≤2% of AI DJ sessions
+  - Post-session rating: "How was your AI DJ experience?" (1-5 stars)
+  - Feedback reason: "Voice prompts were disruptive" (track separately)
+
+**Accessibility Considerations**:
+- **Exclude users with accessibility settings**: Users who have enabled screen readers or audio-only modes
+  - Rationale: Voice prompts may conflict with assistive technology
+  - Exception: Users can explicitly opt-in via "Try AI DJ" promotional banner
+- **Multi-language support**: Launch only in languages with high-quality TTS models
+  - Phase 1: English, Spanish, French, German, Portuguese
+  - Phase 2: Expand based on demand and model quality
+  
+**Content Quality**:
+- **Voice prompt accuracy**: Human evaluation of 500 random samples per treatment
+  - Target: ≥90% appropriate, ≥80% additive value (not repetitive/obvious)
+  - Metrics: Relevance, tone, timing, personalization quality
+- **Fallback**: Silent mode if TTS service degraded (no voice prompts, maintain music transitions)
+
+**Experiment 3 (Family Listening Insights)**:
+
+**Privacy-First Design**:
+- **Opt-in model**: Primary account holder must explicitly enable "Family Insights"
+  - Not enabled by default (requires affirmative action)
+  - Clear value proposition: "See how your family enjoys music together"
+  - Consent flow: "You will see aggregated listening data for all family members"
+  
+- **Configurable visibility**: Family members can control what's shared
+  - Default: Individual listening shown to account holder only
+  - Opt-out: "Hide my listening from family insights" (in account settings)
+  - Granular controls: Hide specific playlists, hide listening after 10 PM, etc.
+  
+- **Aggregation thresholds** (k-anonymity principle):
+  - Only show aggregate stats if ≥3 family members active in time window
+  - Individual breakdowns only with member consent
+  - No personal data shown for minors by default (aggregated into "Family Listening")
+
+**Data Protection**:
+- **No identifiable personal data**: Insights show "Member 1", "Member 2", not real names
+- **Retention limits**: Family insights data retained for 90 days, then aggregated/anonymized
+- **Differential privacy**: Add statistical noise to prevent reverse-engineering individual behavior
+  - Example: If 1 member listens 100 hours, report 95-105 hours (±5% noise)
+  
+**Guardrails**:
+- **Privacy complaint rate**: ≤0.01% of exposed families (target: <5 complaints per 50,000 families)
+  - Monitor support tickets: "family member saw my listening", "privacy concern"
+  - Immediate escalation to legal/privacy teams
+- **Opt-out rate**: ≤15% of families within 30 days
+  - High opt-out signals trust issues or low feature value
+- **Trust erosion indicators**:
+  - Family plan downgrade rate: ≤baseline (ensure feature doesn't drive cancellations)
+  - NPS change: ≥baseline (measure trust impact)
+  - Social media sentiment: Monitor for negative privacy discussions
+
+**Special Safeguards**:
+- **Minors**: No individual-level data shown for users <18 unless explicit parental consent
+  - Account holder can enable "Teen insights" with additional consent flow
+  - Even with consent, apply stricter aggregation (k≥5) and more noise
+- **Sensitive content**: Exclude podcasts, explicit content from family insights
+  - Reduces risk of embarrassment or privacy concerns
+- **Right to deletion**: One-click "Delete my family insights data" button
+  - Deletes historical data, disables feature going forward
+  - Takes effect within 24 hours
+
+**Privacy Reviews**:
+- **Before each ramp phase**: Privacy team review of metrics and incident reports
+- **Weekly**: Privacy metrics dashboard shared with leadership
+- **Immediate killswitch**: Product manager can disable feature for all users in <5 minutes if privacy breach suspected
+- **Post-launch**: Quarterly privacy audit with external consultants
+
+**Compliance & Policy**:
+- **GDPR compliance**: Right to access, right to deletion, data minimization
+- **CCPA compliance**: California users notified of data collection, opt-out available
+- **Children's privacy**: COPPA compliant (no data collection for users <13)
+- **Terms of Service**: Explicit disclosure of family data sharing
+- **Privacy Policy**: Update required detailing aggregation, retention, and member controls
+
+---
+
+## Final Implementation Summary
+
+These three experiments demonstrate comprehensive A/B testing design including:
+
+✅ **Statistical Rigor**: Power analysis, sample sizing, measurement windows, ITT/TOT
+✅ **Multiple Comparisons**: Holm-Bonferroni for A vs Control, B vs Control; exploratory A vs B
+✅ **Peeking Protection**: Pre-registered plans, sequential boundaries for long experiments
+✅ **Privacy & Safety**: Age restrictions, consent flows, moderation, aggregation, differential privacy
+✅ **Operational Readiness**: Phased rollout, rollback triggers, guardrails, cost controls
+✅ **User Control**: Opt-in/opt-out mechanisms, configurable visibility, accessibility considerations
+✅ **Compliance**: GDPR, CCPA, COPPA, terms of service, privacy policy updates
+
+Each experiment is production-ready with clear success criteria, comprehensive risk mitigation, and ethical design principles.
