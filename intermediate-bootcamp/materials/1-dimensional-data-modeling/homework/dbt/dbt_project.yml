@@ -1,0 +1,71 @@
+# dbt Project Configuration for Actors Dimensional Modeling
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'actors_dimensional_modeling'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'actors_dimensional_modeling'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Variables for parameterization
+vars:
+  # Year variables - override these when running dbt
+  prev_year: 1969
+  this_year: 1970
+
+# Model configurations
+models:
+  actors_dimensional_modeling:
+    # Applies to all models in models/
+    +materialized: table
+    +schema: analytics
+    
+    # Custom type creation - run once before models
+    +pre-hook:
+      - "CREATE TYPE IF NOT EXISTS films AS (film TEXT, votes INTEGER, rating REAL, filmid TEXT)"
+      - "CREATE TYPE IF NOT EXISTS quality_class AS ENUM ('star', 'good', 'average', 'bad')"
+    
+    actors_cumulative:
+      +materialized: incremental
+      +unique_key: ['actorid', 'current_year']
+      +on_schema_change: fail
+      
+    actors_history_scd_backfill:
+      +materialized: table
+      +alias: actors_history_scd
+      
+    actors_history_scd_incremental:
+      +materialized: incremental
+      +unique_key: ['actorid', 'start_date']
+      +on_schema_change: fail
+      +alias: actors_history_scd
+
+# Run hooks - execute at the start/end of dbt runs
+on-run-start:
+  - "CREATE SCHEMA IF NOT EXISTS {{ target.schema }}"
+  - "{{ create_custom_types() }}"
+
+on-run-end:
+  - "{{ log('dbt run completed successfully', info=true) }}"
+
+# Seeds configurations
+seeds:
+  actors_dimensional_modeling:
+    +schema: raw
+    +quote_columns: false
